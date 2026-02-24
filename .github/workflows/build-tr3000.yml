@@ -7,79 +7,46 @@ on:
 
 jobs:
   build:
-    name: build immortalwrt for tr3000
+    name: build openwrt for cudy tr3000 (256MB, 240MB layout)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-      - name: Install dependence
+
+      - name: Install dependencies
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
           sudo apt-get update
-          sudo -E apt install ack antlr3 asciidoc autoconf automake autopoint binutils bison build-essential  bzip2 ccache clang cmake cpio curl device-tree-compiler ecj fastjar flex gawk gettext gcc-multilib  g++-multilib git gnutls-dev gperf haveged help2man intltool lib32gcc-s1 libc6-dev-i386 libelf-dev  libglib2.0-dev libgmp3-dev libltdl-dev libmpc-dev libmpfr-dev libncurses-dev libpython3-dev  libreadline-dev libssl-dev libtool libyaml-dev libz-dev lld llvm lrzsz mkisofs msmtp nano  ninja-build p7zip p7zip-full patch pkgconf python3 python3-pip python3-ply python3-docutils  python3-pyelftools qemu-utils re2c rsync scons squashfs-tools subversion swig texinfo uglifyjs   upx-ucl unzip vim wget xmlto xxd zlib1g-dev zstd
-        
-      - name: Clone openwrt source code
-        run: |
-          git clone -b openwrt-24.10 --single-branch --filter=blob:none https://github.com/immortalwrt/immortalwrt
-          cd immortalwrt
+          sudo -E apt install ack antlr3 asciidoc autoconf automake autopoint binutils bison build-essential bzip2 ccache clang cmake cpio curl device-tree-compiler ecj fastjar flex gawk gettext gcc-multilib g++-multilib git gnutls-dev gperf haveged help2man intltool lib32gcc-s1 libc6-dev-i386 libelf-dev libglib2.0-dev libgmp3-dev libltdl-dev libmpc-dev libmpfr-dev libncurses-dev libpython3-dev libreadline-dev libssl-dev libtool libyaml-dev libz-dev lld llvm lrzsz mkisofs msmtp nano ninja-build p7zip p7zip-full patch pkgconf python3 python3-pip python3-ply python3-docutils python3-pyelftools qemu-utils re2c rsync scons squashfs-tools subversion swig texinfo uglifyjs upx-ucl unzip vim wget xmlto xxd zlib1g-dev zstd
 
-      - name: Update the feeds
+      - name: Update feeds
         run: |
-          cd immortalwrt
           ./scripts/feeds update -a
           ./scripts/feeds install -a
 
-      - name: Copy config file
-        run: cp .config immortalwrt/
+      - name: Copy config file from abc/.config
+        run: cp abc/.config .config
 
-      - name: make
+      - name: Build firmware
         env:
           FORCE_UNSAFE_CONFIGURE: 1
-        run: |
-          cd immortalwrt
-          make -j8
-          
-      - name: Rename the default bin
-        run: |
-          cd immortalwrt/bin/targets/mediatek/filogic/
-          mv immortalwrt-mediatek-filogic-cudy_tr3000-v1-ubootmod-squashfs-sysupgrade.itb immortalwrt-mediatek-filogic-cudy_tr3000-v1-ubootmod-squashfs-sysupgrade-default.itb
+        run: make -j8
 
-      - name: apply and apply patch
-        env:
-          FORCE_UNSAFE_CONFIGURE: 1
-        run: |
-          cd immortalwrt
-          git apply ../patches/112m.patch
-          make -j8
-
-      - name: Rename the 112M bin
-        run: |
-          cd immortalwrt/bin/targets/mediatek/filogic/
-          mv immortalwrt-mediatek-filogic-cudy_tr3000-v1-ubootmod-squashfs-sysupgrade.itb immortalwrt-mediatek-filogic-cudy_tr3000-v1-ubootmod-squashfs-sysupgrade-112M.itb          
-        
-      - name: zip the bin
+      - name: Zip the bin directory
         uses: montudor/action-zip@v1
         with:
-          args: zip -qq -r immortalwrt-2410.zip immortalwrt/bin
+          args: zip -qq -r openwrt-cudy-tr3000.zip bin
 
       - name: Release and Upload
         uses: softprops/action-gh-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          files: immortalwrt-2410.zip
-          
+          files: openwrt-cudy-tr3000.zip
+
       - name: Delete workflow runs
         uses: Mattraks/delete-workflow-runs@main
         with:
           retain_days: 0
           keep_minimum_runs: 2
-
-      - name: Remove old Releases
-        uses: dev-drprasad/delete-older-releases@master
-        with:
-          keep_latest: 3
-          delete_tags: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
