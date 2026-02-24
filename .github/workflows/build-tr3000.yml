@@ -29,6 +29,17 @@ jobs:
           ./scripts/feeds update -a
           ./scripts/feeds install -a
 
+      # 新增：检查配置文件是否存在
+      - name: Check for config file in abc/.config
+        run: |
+          if [ ! -f abc/.config ]; then
+            echo "::error::Configuration file abc/.config not found!"
+            echo "Please ensure you have placed your .config file in the 'abc' folder at the root of the repository."
+            echo "Current contents of 'abc' directory (if any):"
+            ls -la abc/ || echo "abc/ directory does not exist"
+            exit 1
+          fi
+
       - name: Copy config file from abc/.config
         run: cp abc/.config .config
 
