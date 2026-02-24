@@ -40,8 +40,8 @@ jobs:
             exit 1
           fi
 
-      - name: Copy config file from abc/.config
-        run: cp abc/.config .config
+      - name: Copy config file from .abc/.config
+        run: cp .abc/.config .config
 
       - name: Build firmware
         env:
