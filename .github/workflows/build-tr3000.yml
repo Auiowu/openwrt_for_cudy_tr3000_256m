@@ -1,4 +1,5 @@
 name: build-tr3000
+name: build-tr3000
 permissions: write-all
 on:
   push:
