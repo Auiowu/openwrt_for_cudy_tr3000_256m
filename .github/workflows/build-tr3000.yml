@@ -54,8 +54,40 @@ jobs:
         env:
           LOG_FILE: ${{ env.LOG_FILE }}
 
-      # 更新 feeds：加入重试机制（最多5次）
-      - name: 更新feeds
+      # ---------- 缓存配置 ----------
+      - name: 缓存 ccache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.ccache
+            openwrt/.ccache
+          key: ccache-${{ runner.os }}-${{ github.ref_name }}-${{ github.sha }}
+          restore-keys: |
+            ccache-${{ runner.os }}-${{ github.ref_name }}-
+            ccache-${{ runner.os }}-
+
+      - name: 缓存工具链和主机工具
+        uses: actions/cache@v3
+        with:
+          path: |
+            openwrt/staging_dir
+            openwrt/build_dir/host
+            openwrt/build_dir/toolchain-*
+          key: toolchain-${{ runner.os }}-${{ github.ref_name }}-${{ github.sha }}
+          restore-keys: |
+            toolchain-${{ runner.os }}-${{ github.ref_name }}-
+            toolchain-${{ runner.os }}-
+
+      - name: 缓存 dl 目录
+        uses: actions/cache@v3
+        with:
+          path: openwrt/dl
+          key: dl-${{ runner.os }}-${{ github.ref_name }}-${{ github.sha }}
+          restore-keys: |
+            dl-${{ runner.os }}-${{ github.ref_name }}-
+            dl-${{ runner.os }}-
+
+      - name: 更新feeds（最多重试5次）
         run: |
           {
             for i in {1..5}; do
@@ -75,8 +107,7 @@ jobs:
         env:
           LOG_FILE: ${{ env.LOG_FILE }}
 
-      # 安装 feeds：加入重试机制（最多5次）
-      - name: 安装feeds
+      - name: 安装feeds（最多重试5次）
         run: |
           {
             for i in {1..5}; do
@@ -117,7 +148,7 @@ jobs:
       - name: 下载软件包源码
         run: |
           {
-            make download -j4
+            make download -4
           } 2>&1 | tee -a $LOG_FILE
         shell: bash
         env:
@@ -163,6 +194,7 @@ jobs:
 
       - name: 创建或更新Release并上传文件
         if: always()
+        continue-on-error: true   # 避免因上传重试失败导致额外错误
         uses: softprops/action-gh-release@v2
         with:
           files: ${{ env.FILES }}
