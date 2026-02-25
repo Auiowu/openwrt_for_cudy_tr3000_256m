@@ -157,7 +157,7 @@ jobs:
       - name: 编译固件
         run: |
           {
-            make -j4
+            make -j4 V=s
           } 2>&1 | tee -a $LOG_FILE
         shell: bash
         env:
