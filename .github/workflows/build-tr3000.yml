@@ -16,7 +16,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # 初始化日志文件（必须在根目录）
       - name: 初始化日志文件
         working-directory: ./
         run: |
@@ -25,9 +24,8 @@ jobs:
           echo "LOG_FILE=$LOG_FILE" >> $GITHUB_ENV
         shell: bash
 
-      # 更新系统并安装依赖（也必须在根目录，因为 openwrt 目录还不存在）
       - name: 更新系统并安装依赖
-        working-directory: ./    # 关键修复：指定根目录
+        working-directory: ./
         run: |
           {
             sudo apt update && sudo apt install -y build-essential clang flex bison \
@@ -39,7 +37,6 @@ jobs:
         env:
           LOG_FILE: ${{ env.LOG_FILE }}
 
-      # 下载源码（必须在根目录，因为要创建 openwrt 目录）
       - name: 下载OpenWrt源码（根据触发tag选择版本）
         working-directory: ./
         run: |
@@ -57,20 +54,43 @@ jobs:
         env:
           LOG_FILE: ${{ env.LOG_FILE }}
 
-      # 以下步骤默认在 ./openwrt 中执行（已存在）
+      # 更新 feeds：加入重试机制（最多5次）
       - name: 更新feeds
         run: |
           {
-            ./scripts/feeds update -a
+            for i in {1..5}; do
+              echo "尝试第 $i 次更新 feeds..."
+              if ./scripts/feeds update -a; then
+                echo "feeds 更新成功"
+                exit 0
+              else
+                echo "第 $i 次更新失败，等待 10 秒后重试..."
+                sleep 10
+              fi
+            done
+            echo "所有重试均失败，退出"
+            exit 1
           } 2>&1 | tee -a $LOG_FILE
         shell: bash
         env:
           LOG_FILE: ${{ env.LOG_FILE }}
 
+      # 安装 feeds：加入重试机制（最多5次）
       - name: 安装feeds
         run: |
           {
-            ./scripts/feeds install -a
+            for i in {1..5}; do
+              echo "尝试第 $i 次安装 feeds..."
+              if ./scripts/feeds install -a; then
+                echo "feeds 安装成功"
+                exit 0
+              else
+                echo "第 $i 次安装失败，等待 10 秒后重试..."
+                sleep 10
+              fi
+            done
+            echo "所有重试均失败，退出"
+            exit 1
           } 2>&1 | tee -a $LOG_FILE
         shell: bash
         env:
@@ -97,7 +117,7 @@ jobs:
       - name: 下载软件包源码
         run: |
           {
-            make download -j4
+            make download -4
           } 2>&1 | tee -a $LOG_FILE
         shell: bash
         env:
@@ -127,7 +147,6 @@ jobs:
           LOG_FILE: ${{ env.LOG_FILE }}
         shell: bash
 
-      # 准备上传文件列表（需要在根目录读取文件）
       - name: 准备上传文件列表
         if: always()
         working-directory: ./
