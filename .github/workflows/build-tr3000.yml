@@ -97,7 +97,7 @@ jobs:
       - name: 下载软件包源码
         run: |
           {
-            make download -4
+            make download -j4
           } 2>&1 | tee -a $LOG_FILE
         shell: bash
         env:
